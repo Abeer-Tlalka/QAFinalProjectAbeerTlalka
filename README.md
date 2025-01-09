@@ -1,5 +1,4 @@
 <h1 align=center>E-Commerce Website with Django + React & Redux</h1>
-<h2 align=center>Otaku House - Anime Merchandise and Cosplay Shop</h2>
 
 ## ✨ [WebCoffee](https://otakuhouse.herokuapp.com/)
 
