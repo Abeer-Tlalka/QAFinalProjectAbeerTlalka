@@ -29,6 +29,7 @@ h2 {
 .carousel-item-prev,
 .carousel-item.active {
   display: flex;
+  background-color:#7e5d5d!important;
 }
 
 .carousel-caption {
@@ -62,3 +63,16 @@ h2 {
     color: white;
   }
 }
+
+
+.btn-outline-success {
+  color: #ffffff!important;
+  background-color: transparent!important;
+  background-image: none!important;
+  border-color: #fefefe!important;
+}
+.btn.outline-success:hover{
+  background-color: #815f5f!important;
+  border-color: #faa6a6!important;
+}
+
