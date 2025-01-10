@@ -100,7 +100,7 @@ jobs:
      
       - name: Run tests
         run: |
-          source .venv/bin/activate
+          source backend/.venv/Scripts/activate
           pytest ./tests
 
       - name: Upload code
