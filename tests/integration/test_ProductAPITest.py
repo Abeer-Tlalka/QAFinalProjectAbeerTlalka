@@ -74,7 +74,4 @@ class TestsProductAPI(TestCase):
         """Test deleting a product."""
         product_id = self.test_product._id
         response = self.client.delete(f"{self.api_url}{product_id}/")
-       
-        # Verify the product is actually deleted
-    
         self.assertIn(response.status_code, range(400,410))
