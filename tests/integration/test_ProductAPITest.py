@@ -40,18 +40,18 @@ class TestsProductAPI(TestCase):
 
     def test_filter_by_category(self):
         """Test filtering products by category."""
-        response = self.client.get(f"{self.api_url}?category=Test Category")  # Change category to match the product
+        response = self.client.get(f"{self.api_url}?category=Test Category")  
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         products = response.data.get("products", [])
         for product in products:
-            self.assertEqual(product["category"], "Test Category")  # Adjusted category to match
+            self.assertEqual(product["category"], "Test Category")  # 
 
     # POST
 
     def test_create_product_missing_fields(self):
         """Test creating a product with missing required fields."""
         product_data = {"name": "Incomplete Product"}
-        response = self.client.post(self.api_url, product_data, format='json')  # Add format='json'
+        response = self.client.post(self.api_url, product_data, format='json')  
         self.assertIn(response.status_code, range(400,410))
 
    
