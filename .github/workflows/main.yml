@@ -38,24 +38,27 @@ jobs:
           python-version: '3.10.4'
           cache: 'pip'
 
-      - name: Install backend dependencies
+      - name: Install dependencies
+        working-directory: ./backend
         run: |
           python -m venv .venv
           source .venv/bin/activate
           pip install --upgrade pip
-          pip install -r ./backend/requirements.txt
+          pip install -r requirements.txt
 
-      - name: Cache Python virtual environment
+      - name: Cache virtual environment
         uses: actions/cache@v3
         with:
           path: backend/.venv
           key: venv-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             venv-${{ runner.os }}-
+            venv-
 
-      - name: Build frontend
+      - name: Install npm packages and run build command
         run: |
           cd ./frontend
+          export NODE_OPTIONS=--openssl-legacy-provider
           npm install
           npm run build
 
@@ -69,6 +72,8 @@ jobs:
   test:
     needs: build
     runs-on: ubuntu-latest
+    outputs:
+      artifact-url: ${{ steps.upload-test-report.outputs.artifact-url }}
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -80,6 +85,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.10.4'
+          cache: 'pip'
 
       - name: Restore cached virtual environment
         uses: actions/cache@v3
@@ -89,12 +95,14 @@ jobs:
           restore-keys: |
             venv-${{ runner.os }}-
 
-      - name: Run backend tests
+      - name: Run tests
         run: |
           source backend/.venv/bin/activate
-          pytest ./backend/tests --html-report=./backend/report/report.html --title="Test Report"
+          pytest ./tests --html-report=./backend/report/report.html --title="PYTEST REPORT"
 
       - name: Upload test report
+        id: upload-test-report
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: test-report
@@ -105,7 +113,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: Download build artifacts
+      - name: Download code
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts-${{ github.run_id }}
@@ -115,28 +123,58 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/my-app:latest .
 
-      - name: Push Docker Image to Docker Hub
+      - name: Login and Push Docker Image
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
           docker push ${{ secrets.DOCKER_USERNAME }}/my-app:latest
 
-      - name: Deploy to Render
-        uses: gh-actions-workflows/deploy-docker-render@v1.1
-        with:
-          deploy-hook: ${{ secrets.RENDER_DEPLOY_HOOK }}
-          image-url: ${{ secrets.DOCKER_USERNAME }}/my-app:latest
-          render-api-key: ${{ secrets.RENDER_TOKEN }}
-          wait-for-deployment: true
+      # - name: Deploy to render.com
+      #   uses: gh-actions-workflows/deploy-docker-render@v1.1
+      #   with:
+      #     deploy-hook: ${{ secrets.RENDER_DEPLOY_HOOK }}
+      #     image-url: ${{ secrets.DOCKER_USERNAME }}/my-app:latest
+      #     render-api-key: ${{ secrets.RENDER_TOKEN }}
+      #     wait-for-deployment: true
 
-      - name: Send Slack Notification
-        uses: 8398a7/action-slack@v3
+      # - name: Send Slack Notification
+      #   uses: 8398a7/action-slack@v3
+      #   with:
+      #     status: custom
+      #     custom_payload: |
+      #       {
+      #         "title": ":tada: Build successful, deployed to Render.com",
+      #         "text": "View the live site: <https://example.render.com>",
+      #         "color": "#36a64f"
+      #       }
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  notify:
+    if: failure()
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download test report
+        uses: actions/download-artifact@v4
         with:
-          status: custom
-          custom_payload: |
-            {
-              "title": ":tada: Deployment Successful!",
-              "text": "Your application has been successfully deployed to Render.",
-              "color": "#36a64f"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          name: test-report
+          path: ./report
+
+      - name: Deploy report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./report
+
+      # - name: Send Slack Notification
+      #   uses: 8398a7/action-slack@v3
+      #   with:
+      #     status: failure
+      #     custom_payload: |
+      #       {
+      #         "title": ":x: Tests failed",
+      #         "text": "Check the test report: <https://example.github.io/report.html>",
+      #         "color": "#FF0000"
+      #       }
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
